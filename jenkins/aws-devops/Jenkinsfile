@@ -46,6 +46,7 @@ def deployApp(accountId, regionName, projectName, environmentName) {
     aws s3 cp s3://${bucketName}}/admin.conf ./admin.conf --region ${regionName}
     helm upgrade \
       --install \
+      --wait --timeout 5m0s \
       --kubeconfig ./admin.conf \
       ${projectName} ./aws-devops
   """
