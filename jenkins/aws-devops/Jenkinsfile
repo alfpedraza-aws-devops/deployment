@@ -44,10 +44,10 @@ def deployApp(accountId, regionName, projectName, environmentName) {
   sh """
     cd ./helm
     aws s3 cp s3://${bucketName}/admin.conf ./admin.conf --region ${regionName}
+    export KUBECONFIG=./admin.conf
     helm upgrade \
       --install \
       --wait --timeout 300 \
-      --kubeconfig ./admin.conf \
       ${projectName} ./aws-devops
   """
 }
