@@ -1,0 +1,22 @@
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.fibonacci.appName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Values.fibonacci.appName }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  minReplicas: {{ .Values.fibonacci.horizontalPodAutoScaler.minReplicas }}
+  maxReplicas: {{ .Values.fibonacci.horizontalPodAutoScaler.maxReplicas }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.fibonacci.appName }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: {{ .Values.fibonacci.horizontalPodAutoScaler.cpuUtilization }}

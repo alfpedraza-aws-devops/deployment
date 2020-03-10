@@ -1,0 +1,35 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: {{ .Values.webui.appName }}
+  labels:
+    app: {{ .Values.webui.appName }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.webui.deployment.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.webui.appName }}
+        chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+        release: {{ .Release.Name }}
+        heritage: {{ .Release.Service }}
+    spec:
+      containers:
+      - name: {{ .Values.webui.appName }}
+        image: "{{ .Values.webui.deployment.image.repository }}:{{ .Values.webui.deployment.image.tag }}"
+        imagePullPolicy: {{ .Values.webui.deployment.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.webui.service.internalPort }}
+        env:
+        - name: KUBERNETESAPI_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.webui.appName }}
+              key: kubernetesApiUrl
+        resources:
+          limits:
+            cpu: {{ .Values.webui.deployment.limits.cpu }}
+            memory: {{ .Values.webui.deployment.limits.memory }}

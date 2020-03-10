@@ -1,0 +1,56 @@
+fibonacci:
+  appName: fibonacci
+  deployment:
+    image:
+      repository: alfredopedraza/aws-devops-fibonacci
+      tag: "0.1.3"
+      pullpolicy: IfNotPresent
+    limits:
+      cpu: 250m
+      memory: 128Mi
+  service:
+    type: ClusterIP
+    externalPort: 80
+    internalPort: 80
+  horizontalPodAutoScaler:
+    minReplicas: 1
+    maxReplicas: 30
+    cpuUtilization: 40
+
+kubernetesapi:
+  appName: kubernetes-api
+  deployment:
+    replicaCount: 1
+    serviceAccountName: aws-devops-kubernetes-api
+    image:
+      repository: alfredopedraza/aws-devops-kubernetes-api
+      tag: "0.1.10"
+      pullpolicy: IfNotPresent
+    env:
+      jobTargetUrl: http://fibonacci/api/fibonacci/40
+      corsOrigins: http://a9493ea0a599911eaa5bc02fba4d2adf-2143322710.us-east-2.elb.amazonaws.com
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  service:
+    type: LoadBalancer
+    externalPort: 80
+    internalPort: 8080
+
+webui:
+  appName: web-ui
+  deployment:
+    replicaCount: 1
+    image:
+      repository: alfredopedraza/aws-devops-web-ui
+      tag: "0.1.3"
+      pullpolicy: IfNotPresent
+    env:
+      kubernetesApiUrl: http://a94911f66599911eaa5bc02fba4d2adf-647009387.us-east-2.elb.amazonaws.com
+    limits:
+      cpu: 100m
+      memory: 32Mi
+  service:
+     type: LoadBalancer
+     externalPort: 80
+     internalPort: 80

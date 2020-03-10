@@ -1,0 +1,42 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: {{ .Values.kubernetesapi.appName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Values.kubernetesapi.appName }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.kubernetesapi.deployment.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.kubernetesapi.appName }}
+        chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+        release: {{ .Release.Name }}
+        heritage: {{ .Release.Service }}
+    spec:
+      serviceAccountName: {{ .Values.kubernetesapi.deployment.serviceAccountName }}
+      containers:
+      - name: {{ .Values.kubernetesapi.appName }}
+        image: "{{ .Values.kubernetesapi.deployment.image.repository }}:{{ .Values.kubernetesapi.deployment.image.tag }}"
+        imagePullPolicy: {{ .Values.kubernetesapi.deployment.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.kubernetesapi.service.internalPort }}
+        env:
+        - name: JOB_TARGET_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.kubernetesapi.appName }}
+              key: jobTargetUrl
+        - name: ANGULAR_SERVICE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.kubernetesapi.appName }}
+              key: corsOrigins
+        resources:
+          limits:
+            cpu: {{ .Values.kubernetesapi.deployment.limits.cpu }}
+            memory: {{ .Values.kubernetesapi.deployment.limits.memory }}
