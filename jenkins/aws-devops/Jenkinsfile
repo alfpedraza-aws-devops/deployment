@@ -43,7 +43,7 @@ def deployApp(accountId, regionName, projectName, environmentName) {
   git("https://github.com/alfpedraza-aws-devops/deployment")
   sh """
     cd ./helm
-    aws s3 cp s3://${bucketName}}/admin.conf ./admin.conf --region ${regionName}
+    aws s3 cp s3://${bucketName}/admin.conf ./admin.conf --region ${regionName}
     helm upgrade \
       --install \
       --wait --timeout 5m0s \
