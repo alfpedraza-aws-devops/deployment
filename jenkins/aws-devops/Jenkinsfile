@@ -48,10 +48,12 @@ def waitUntilOneNodeIsReady() {
     echo nodes;
     def matcher = (nodes =~ /\s+Ready\s+node\s+/);
     isReady = matcher;
+    echo isReady
     matcher = null
     if (isReady) break;
     sleep(15);
   }
+  echo isReady
   if (!isReady) throw new Exception("Couldn't wait for node ready.");
 }
 
