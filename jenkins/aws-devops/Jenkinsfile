@@ -52,7 +52,7 @@ def waitUntil(scriptText, errorMessage) {
 def waitUntilConfigFileIsReady(bucketName) {
   waitUntil("""
     aws s3 cp s3://${bucketName}/admin.conf ./helm/admin.conf --region ${regionName}
-    CONFIG_FILE=$(cat ./helm/admin.conf)
+    CONFIG_FILE=\$(cat ./helm/admin.conf)
     echo CONFIG_FILE
   """);
 }
