@@ -49,7 +49,7 @@ def waitUntil(scriptText, errorMessage) {
   if (!isReady) throw new Exception("Timeout!");
 }
 
-def waitUntilConfigFileIsReady(bucketName) {
+def waitUntilConfigFileIsReady(bucketName, regionName) {
   waitUntil("""
     aws s3 cp s3://${bucketName}/admin.conf ./helm/admin.conf --region ${regionName}
     CONFIG_FILE=\$(cat ./helm/admin.conf)
@@ -68,7 +68,7 @@ def waitUntilTillerIsReady() {
 def deployApp(accountId, regionName, projectName, environmentName) {
   git("https://github.com/alfpedraza-aws-devops/deployment");
   def bucketName = "${accountId}-${projectName}-private-${environmentName}-master";
-  waitUntilConfigFileIsReady(bucketName);
+  waitUntilConfigFileIsReady(bucketName, regionName);
   waitUntilTillerIsReady();
   sh """
     cd ./helm
