@@ -210,7 +210,7 @@ node {
       /* environmentName       */ "dev",
       /* ecrUrl                */ params.ECR_URL,
       /* buildId               */ env.BUILD_ID,
-      /* fibonacciImageTag     */ params.FIBONACCI_IMAGE_TAG
+      /* fibonacciImageTag     */ params.FIBONACCI_IMAGE_TAG,
       /* kubernetesApiImageTag */ params.KUBERNETESAPI_IMAGE_TAG,
       /* webUiImageTag         */ params.WEBUI_IMAGE_TAG);
   }
@@ -232,7 +232,7 @@ node {
       /* environmentName       */ "prod",
       /* ecrUrl                */ params.ECR_URL,
       /* buildId               */ env.BUILD_ID,
-      /* fibonacciImageTag     */ params.FIBONACCI_IMAGE_TAG
+      /* fibonacciImageTag     */ params.FIBONACCI_IMAGE_TAG,
       /* kubernetesApiImageTag */ params.KUBERNETESAPI_IMAGE_TAG,
       /* webUiImageTag         */ params.WEBUI_IMAGE_TAG);
   }
