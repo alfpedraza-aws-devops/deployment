@@ -112,7 +112,6 @@ def deployApplication(
   String fibonacciImageName, String kubernetesApiImageName, String webUiImageName,
   String webUiDns, String kubernetesApiDns) {
   
-  input("Deploy to PROD?");
   sh """
     cd helm
     rm -rf aws-devops/templates 
