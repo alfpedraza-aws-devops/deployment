@@ -52,14 +52,14 @@ def waitUntil(scriptText) {
 def waitUntilConfigFileIsReady(bucketName, regionName) {
   waitUntil("""
     aws s3 cp s3://${bucketName}/admin.conf ./helm/admin.conf --region ${regionName} || true
-    CONFIG_FILE=\$(cat ./helm/admin.conf || "")
+    CONFIG_FILE=\$(cat ./helm/admin.conf || echo "")
     echo CONFIG_FILE
   """);
 }
 
 def waitUntilTillerIsReady() {
   waitUntil('''
-    TILLER="$(kubectl --kubeconfig=./helm/admin.conf rollout status -w deployment/tiller-deploy --namespace=kube-system || '')"
+    TILLER=$(kubectl --kubeconfig=./helm/admin.conf rollout status -w deployment/tiller-deploy --namespace=kube-system || echo "")
     TILLER_NOT_FOUND=$(echo "$TILLER" | grep "(NotFound)" | head -1)
     if [$TILLER_NOT_FOUND == ""]; then echo "Found"; else echo ""; fi;
   ''');
