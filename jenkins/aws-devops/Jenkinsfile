@@ -40,14 +40,15 @@ def applyTerraformUpdates(String accountId, String regionName, String projectNam
 
 def waitUntilOneNodeIsReady() {
   def isReady = false;
-  for (i = 0; i < 40; i++) {
+  for (def i = 0; i < 40; i++) {
     def nodes = sh(
       script: "kubectl --kubeconfig=./helm/admin.conf get nodes",
       returnStdout: true
     ).trim();
-    idReady = (nodes =~ /\s+Ready\s+node\s+/);
+    def matcher = (nodes =~ /\s+Ready\s+node\s+/);
+    idReady = (matcher.getCount() > 0);
     if (isReady) break;
-    sleep(15000);
+    sleep(15);
   }
   if (!isReady) throw new Exception("Couldn't wait for node ready.");
 }
