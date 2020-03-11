@@ -47,6 +47,7 @@ def waitUntilOneNodeIsReady() {
     ).trim();
     def matcher = (nodes =~ /\s+Ready\s+node\s+/);
     idReady = matcher.matches();
+    matcher = null
     if (isReady) break;
     sleep(15);
   }
