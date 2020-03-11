@@ -45,12 +45,12 @@ def waitUntilOneNodeIsReady() {
       script: '''
         NODES="$(kubectl --kubeconfig=./helm/admin.conf get nodes)"
         NODE_LINE=$(echo "$NODES" | grep "[[:space:]]\\+Ready[[:space:]]\\+node[[:space:]]\\+" | head -1)
-        echo NODE_LINE
+        echo $NODE_LINE
       ''',
       returnStdout: true
     ).trim();
     echo nodeReady
-    idReady = (nodeReady != "");
+    idReady = (!nodeReady.isEmpty());
     if (isReady) break;
     sleep(15);
   }
