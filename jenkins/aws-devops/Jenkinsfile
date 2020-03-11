@@ -1,19 +1,19 @@
-def buildAndPushImage(regionName, gitUrl, ecrUrl, rawImageName, rawImageTag, buildId) {
-  def imageTag  = "${rawImageTag}.${buildId}"
-  def imageName = "${ecrUrl}/${rawImageName}:${imageTag}"
-  git(gitUrl)
+def buildAndPushImage(String regionName, String gitUrl, String ecrUrl, String rawImageName, String rawImageTag, String buildId) {
+  def imageTag  = "${rawImageTag}.${buildId}";
+  def imageName = "${ecrUrl}/${rawImageName}:${imageTag}";
+  git(gitUrl);
   sh """
     aws ecr get-login-password --region ${regionName} | \
     docker login --username AWS --password-stdin ${ecrUrl}
     docker build -t ${imageName} .
     docker push ${imageName}
-  """
+  """;
 }
 
-def applyTerraformUpdates(accountId, regionName, projectName, environmentName) {
-  def bucketName = "${accountId}-${projectName}-${environmentName}-terraform-state"
-  def tableName  = "${accountId}-${projectName}-${environmentName}-terraform-lock"
-  git("https://github.com/alfpedraza-aws-devops/infrastructure")
+def applyTerraformUpdates(String accountId, String regionName, String projectName, String environmentName) {
+  def bucketName = "${accountId}-${projectName}-${environmentName}-terraform-state";
+  def tableName  = "${accountId}-${projectName}-${environmentName}-terraform-lock";
+  git("https://github.com/alfpedraza-aws-devops/infrastructure");
   withCredentials([
     string(credentialsId: "AWS_ACCESS_KEY_ID"    , variable: "AWS_ACCESS_KEY_ID"    ),
     string(credentialsId: "AWS_SECRET_ACCESS_KEY", variable: "AWS_SECRET_ACCESS_KEY")
@@ -34,22 +34,40 @@ def applyTerraformUpdates(accountId, regionName, projectName, environmentName) {
         -var "account_id=${accountId}" \
         -var "region_name=${regionName}" \
         -var "project_name=${projectName}"
-    """
+    """;
   }
 }
 
+def waitUntilOneNodeIsReady() {
+  def isReady = false;
+  for(int i in 1..40) {
+    def nodes = sh(
+      script: "kubectl --kubeconfig=./admin.conf get nodes",
+      returnStdout: true
+    ).trim();
+    idReady = (nodes =~ /\s+Ready\s+node\s+/);
+    if (isReady) break;
+    sleep(15000);
+  }
+  if (!isReady) throw new Exception("Couldn't wait for node ready.");
+}
+
 def deployApp(accountId, regionName, projectName, environmentName) {
+  
   def bucketName = "${accountId}-${projectName}-private-${environmentName}-master"
   git("https://github.com/alfpedraza-aws-devops/deployment")
   sh """
     cd ./helm
     aws s3 cp s3://${bucketName}/admin.conf ./admin.conf --region ${regionName}
+  """;
+  waitUntilOneNodeIsReady();
+  sh """
     export KUBECONFIG=./admin.conf
     helm upgrade \
       --install \
       --wait --timeout 300 \
       ${projectName} ./aws-devops
-  """
+  """;
 }
 
 node {
