@@ -45,6 +45,7 @@ def waitUntilOneNodeIsReady() {
       script: "kubectl --kubeconfig=./helm/admin.conf get nodes",
       returnStdout: true
     ).trim();
+    echo nodes;
     def matcher = (nodes =~ /\s+Ready\s+node\s+/);
     idReady = matcher.matches();
     matcher = null
