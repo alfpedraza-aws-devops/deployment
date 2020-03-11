@@ -80,10 +80,11 @@ def waitUntilHelmTillerIsReady() {
 }
 
 def getLoadBalancerDNS(String serviceName) {
-  String scriptText =
-    "kubectl get service ${serviceName} \
+  String scriptText = """
+    kubectl get service ${serviceName} \
       -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' \
-      --kubeconfig=./helm/admin.conf"
+      --kubeconfig=./helm/admin.conf
+  """
   waitUntil(scriptText);
   String dns = sh(script: scriptText, returnStdout: true).trim();
   return dns;
