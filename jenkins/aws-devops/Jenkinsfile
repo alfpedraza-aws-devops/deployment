@@ -59,8 +59,8 @@ def waitUntilConfigFileIsReady(bucketName, regionName) {
 
 def waitUntilTillerIsReady() {
   waitUntil('''
-    TILLER=$(kubectl --kubeconfig=./helm/admin.conf rollout status -w deployment/tiller-deploy-2 --namespace=kube-system || echo "")
-    TILLER_NOT_FOUND=$(echo "$TILLER" | grep ".*\\(NotFound\\).*" | head -1)
+    TILLER=$(kubectl --kubeconfig=./helm/admin.conf rollout status -w deployment/tiller-deploy-2 --namespace=kube-system || echo "(NotFound)")
+    TILLER_NOT_FOUND=$(echo "$TILLER" | grep "(NotFound)" | head -1)
     if [[ $TILLER_NOT_FOUND == "" ]]; then echo "Found"; else echo ""; fi;
   ''');
 }
@@ -71,7 +71,8 @@ def deployApp(accountId, regionName, projectName, environmentName) {
   waitUntilConfigFileIsReady(bucketName, regionName);
   waitUntilTillerIsReady();
   sh """
-    cd ./helm
+    cd ./helm/aws-devops/templates
+    rm !("kubernetes-api-service.yaml"|"web-ui-service.yaml")
     export KUBECONFIG=./admin.conf
     helm upgrade \
       --install \
