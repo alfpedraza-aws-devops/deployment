@@ -51,12 +51,12 @@ def waitUntilOneNodeIsReady() {
     ).trim();
     echo nodeReady
     isReady = (!nodeReady.isEmpty());
-    echo isReady
+    echo isReady.toString()
     matcher = null
     if (isReady) break;
     sleep(15);
   }
-  echo isReady
+  echo isReady.toString()
   if (!isReady) throw new Exception("Couldn't wait for node ready.");
 }
 
