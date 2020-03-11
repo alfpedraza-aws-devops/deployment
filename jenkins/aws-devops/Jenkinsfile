@@ -40,7 +40,7 @@ def applyTerraformUpdates(String accountId, String regionName, String projectNam
 
 def waitUntilOneNodeIsReady() {
   def isReady = false;
-  for(int i in 1..40) {
+  for (i = 0; i < 40; i++) {
     def nodes = sh(
       script: "kubectl --kubeconfig=./admin.conf get nodes",
       returnStdout: true
