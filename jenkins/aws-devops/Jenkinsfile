@@ -41,14 +41,16 @@ def applyTerraformUpdates(String accountId, String regionName, String projectNam
 def waitUntilOneNodeIsReady() {
   def isReady = false;
   for (def i = 0; i < 40; i++) {
-    def nodes = sh(
-      script: "kubectl --kubeconfig=./helm/admin.conf get nodes",
+    def nodeReady = sh(
+      script: '''
+        local NODES="$(kubectl --kubeconfig=./helm/admin.conf get nodes)
+        local NODE_LINE=$(echo "$NODES" | grep "[[:space:]]\+Ready[[:space:]]\+node[[:space:]]\+" | head -1)
+        echo NODE_LINE
+      '''
       returnStdout: true
     ).trim();
-    echo nodes;
-    def matcher = (nodes =~ /\s+Ready\s+node\s+/);
-    idReady = matcher.find();
-    matcher = null
+    echo nodeReady
+    idReady = (nodeReady != "");
     if (isReady) break;
     sleep(15);
   }
