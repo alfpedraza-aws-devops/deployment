@@ -2,8 +2,7 @@ fibonacci:
   appName: fibonacci
   deployment:
     image:
-      repository: alfredopedraza/aws-devops-fibonacci
-      tag: "0.1.3"
+      name: "alfredopedraza/aws-devops-fibonacci:0.1.3"
       pullpolicy: IfNotPresent
     limits:
       cpu: 250m
@@ -23,8 +22,7 @@ kubernetesapi:
     replicaCount: 1
     serviceAccountName: aws-devops-kubernetes-api
     image:
-      repository: alfredopedraza/aws-devops-kubernetes-api
-      tag: "0.1.10"
+      name: "alfredopedraza/aws-devops-kubernetes-api:0.1.10"
       pullpolicy: IfNotPresent
     env:
       jobTargetUrl: http://fibonacci/api/fibonacci/40
@@ -42,8 +40,7 @@ webui:
   deployment:
     replicaCount: 1
     image:
-      repository: alfredopedraza/aws-devops-web-ui
-      tag: "0.1.3"
+      name: "alfredopedraza/aws-devops-web-ui:0.1.3"
       pullpolicy: IfNotPresent
     env:
       kubernetesApiUrl: http://a94911f66599911eaa5bc02fba4d2adf-647009387.us-east-2.elb.amazonaws.com

@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: {{ .Values.webui.appName }}
-        image: "{{ .Values.webui.deployment.image.repository }}:{{ .Values.webui.deployment.image.tag }}"
+        image: {{ .Values.webui.deployment.image.name }}
         imagePullPolicy: {{ .Values.webui.deployment.image.pullPolicy }}
         ports:
         - containerPort: {{ .Values.webui.service.internalPort }}

@@ -21,7 +21,7 @@ spec:
       serviceAccountName: {{ .Values.kubernetesapi.deployment.serviceAccountName }}
       containers:
       - name: {{ .Values.kubernetesapi.appName }}
-        image: "{{ .Values.kubernetesapi.deployment.image.repository }}:{{ .Values.kubernetesapi.deployment.image.tag }}"
+        image: {{ .Values.kubernetesapi.deployment.image.name }}
         imagePullPolicy: {{ .Values.kubernetesapi.deployment.image.pullPolicy }}
         ports:
         - containerPort: {{ .Values.kubernetesapi.service.internalPort }}

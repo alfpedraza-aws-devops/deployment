@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: {{ .Values.fibonacci.appName }}
-        image: "{{ .Values.fibonacci.deployment.image.repository }}:{{ .Values.fibonacci.deployment.image.tag }}"
+        image: {{ .Values.fibonacci.deployment.image.name }}
         imagePullPolicy: {{ .Values.fibonacci.deployment.image.pullPolicy }}
         ports:
         - containerPort: {{ .Values.fibonacci.service.internalPort }}
