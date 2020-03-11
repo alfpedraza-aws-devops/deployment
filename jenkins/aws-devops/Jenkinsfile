@@ -46,8 +46,8 @@ def waitUntilOneNodeIsReady() {
       returnStdout: true
     ).trim();
     echo nodes;
-    def matcher = (nodes =~ /(?s)\s+Ready\s+node\s+/);
-    idReady = matcher.matches();
+    def matcher = (nodes =~ /\s+Ready\s+node\s+/);
+    idReady = matcher.find();
     matcher = null
     if (isReady) break;
     sleep(15);
