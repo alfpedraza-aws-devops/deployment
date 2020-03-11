@@ -49,19 +49,14 @@ def waitUntilOneNodeIsReady() {
       ''',
       returnStdout: true
     ).trim();
-    echo nodeReady
     isReady = (!nodeReady.isEmpty());
-    echo isReady.toString()
-    matcher = null
     if (isReady) break;
     sleep(15);
   }
-  echo isReady.toString()
   if (!isReady) throw new Exception("Couldn't wait for node ready.");
 }
 
 def deployApp(accountId, regionName, projectName, environmentName) {
-  
   def bucketName = "${accountId}-${projectName}-private-${environmentName}-master"
   git("https://github.com/alfpedraza-aws-devops/deployment")
   sh """
