@@ -1,7 +1,14 @@
-def buildAndPushImage(regionName, gitUrl, ecrUrl, rawImageName, rawImageTag, buildId) {
-  def imageTag  = "${rawImageTag}.${buildId}";
-  def imageName = "${ecrUrl}/${rawImageName}:${imageTag}";
+def getImageName(String ecrUrl, String name, String tag, String buildId) {
+  String imageName = "${ecrUrl}/${name}:${tag}.${buildId}";
+  return imageName;
+}
+
+def buildAndPushImage(
+  String regionName, String gitUrl, String ecrUrl,
+  String rawImageName, String rawImageTag, String buildId) {
+
   git(gitUrl);
+  String imageName = getImageName(ecrUrl, rawImageName, rawImageTag, buildId);
   sh """
     aws ecr get-login-password --region ${regionName} | \
     docker login --username AWS --password-stdin ${ecrUrl}
@@ -10,14 +17,17 @@ def buildAndPushImage(regionName, gitUrl, ecrUrl, rawImageName, rawImageTag, bui
   """;
 }
 
-def applyTerraformUpdates(accountId, regionName, projectName, environmentName) {
-  def bucketName = "${accountId}-${projectName}-${environmentName}-terraform-state";
-  def tableName  = "${accountId}-${projectName}-${environmentName}-terraform-lock";
+def applyTerraformUpdates(
+  String accountId, String regionName,
+  String projectName, String environmentName) {
+
   git("https://github.com/alfpedraza-aws-devops/infrastructure");
   withCredentials([
     string(credentialsId: "AWS_ACCESS_KEY_ID"    , variable: "AWS_ACCESS_KEY_ID"    ),
     string(credentialsId: "AWS_SECRET_ACCESS_KEY", variable: "AWS_SECRET_ACCESS_KEY")
   ]) {
+    String bucketName = "${accountId}-${projectName}-${environmentName}-terraform-state";
+    String tableName  = "${accountId}-${projectName}-${environmentName}-terraform-lock";
     sh """
       cd ./${environmentName}
       terraform init \
@@ -38,44 +48,45 @@ def applyTerraformUpdates(accountId, regionName, projectName, environmentName) {
   }
 }
 
-def waitUntil(scriptText) {
-  def isReady = false;
-  for (def i = 0; i < 40; i++) {
-    def textReady = sh(script: scriptText, returnStdout: true).trim();
-    isReady = (!textReady.isEmpty());
+def waitUntil(String scriptText) {
+  Boolean isReady = false;
+  for (int i = 0; i < 40; i++) {
+    String result = sh(script: scriptText, returnStdout: true).trim();
+    isReady = (!result.isEmpty());
     if (isReady) break;
     sleep(15);
   }
   if (!isReady) throw new Exception("Timeout!");
 }
 
-def waitUntilConfigFileIsReady(bucketName, regionName) {
+def waitUntilKubeConfigIsReady(String bucketName, String regionName) {
   waitUntil("""
     aws s3 cp s3://${bucketName}/admin.conf ./helm/admin.conf --region ${regionName} || true
-    CONFIG_FILE=\$(cat ./helm/admin.conf || echo "")
-    echo \$CONFIG_FILE
+    RESULT=\$(stat ./helm/admin.conf || echo "")
+    echo \$RESULT
   """);
 }
 
-def waitUntilTillerIsReady() {
+def waitUntilHelmTillerIsReady() {
   waitUntil('''
-    TILLER=$(kubectl --kubeconfig=./helm/admin.conf rollout status -w deployment/tiller-deploy --namespace=kube-system || echo "(NotFound)")
+    RESULT=""
+    TILLER=$(kubectl --kubeconfig=./helm/admin.conf rollout status -w deployment/tiller-deploy
+      --namespace=kube-system || echo "(NotFound)")
     TILLER_NOT_FOUND=$(echo "$TILLER" | grep "(NotFound)" | head -1)
-    if [[ $TILLER_NOT_FOUND == "" ]]; then echo "Found"; else echo ""; fi;
+    if [[ $TILLER_NOT_FOUND == "" ]]; then RESULT="Found"; else RESULT=""; fi;
+    echo $RESULT
   ''');
 }
 
-def waitUntilLoadBalancersAreReady() {
-
+def getLoadBalancerDNS(String serviceName) {
+  String scriptText =
+    "kubectl get service ${serviceName} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'"
+  waitUntil(scriptText);
+  String dns = sh(script: scriptText, returnStdout: true).trim();
+  return dns;
 }
 
-def deployApp(accountId, regionName, projectName, environmentName) {
-  git("https://github.com/alfpedraza-aws-devops/deployment");
-  def bucketName = "${accountId}-${projectName}-private-${environmentName}-master";
-  waitUntilConfigFileIsReady(bucketName, regionName);
-  waitUntilTillerIsReady();
-
-  // Create the Load Balancers First to get their DNS.
+def deployLoadBalancers(String projectName) {
   sh """
     cd helm
     mv aws-devops/templates tmp
@@ -85,12 +96,18 @@ def deployApp(accountId, regionName, projectName, environmentName) {
     export KUBECONFIG=admin.conf
     helm upgrade \
       --install \
-      --wait --timeout 300 \
-      ${projectName} aws-devops
+      --wait \
+      --timeout 300 \
+      ${projectName} \
+      ./aws-devops
   """;
-  waitUntilLoadBalancersAreReady();
+}
 
-  // Create the rest of the chart.
+def deployApplication(
+  String projectName,
+  String fibonacciImageName, String kubernetesApiImageName, String webUiImageName,
+  String webUiDns, String kubernetesApiDns) {
+  
   sh """
     cd helm
     rm -rf aws-devops/templates 
@@ -98,9 +115,43 @@ def deployApp(accountId, regionName, projectName, environmentName) {
     export KUBECONFIG=admin.conf
     helm upgrade \
       --install \
-      --wait --timeout 300 \
-      ${projectName} aws-devops
+      --wait \
+      --timeout 300 \
+      --set fibonacci.deployment.image.name=${fibonacciImageName}
+      --set kubernetesapi.deployment.image.name=${kubernetesApiImageName}
+      --set webui.deployment.image.name=${webUiImageName}
+      --set kubernetesapi.deployment.env.corsOrigins=${webUiDns}
+      --set webui.deployment.env.kubernetesApiUrl=${kubernetesApiDns}
+      ${projectName} \
+      ./aws-devops
   """;
+}
+
+def deployApp(
+  String accountId, String regionName, String projectName, String environmentName,
+  String ecrUrl, String buildId,
+  String fibonacciImageTag, String kubernetesApiImageTag, String webUiImageTag) {
+
+  git("https://github.com/alfpedraza-aws-devops/deployment");
+  
+  String bucketName = "${accountId}-${projectName}-private-${environmentName}-master";
+  waitUntilKubeConfigIsReady(bucketName, regionName);
+  waitUntilHelmTillerIsReady();
+  deployLoadBalancers(projectName);
+
+  String kubernetesApiDns        = "http://" + getLoadBalancerDNS("kubernetes-api");
+  String webUiDns                = "http://" + getLoadBalancerDNS("web-ui");
+  String fibonacciImageName      = getImageName(ecrUrl, "aws-devops-fibonacci"     , fibonacciImageTag    , buildId);
+  String kubernetesApiImageName  = getImageName(ecrUrl, "aws-devops-kubernetes-api", kubernetesApiImageTag, buildId);
+  String webUiImageName          = getImageName(ecrUrl, "aws-devops-web-ui"        , webUiImageTag        , buildId);
+
+  deployApplication(
+    projectName,
+    fibonacciImageName,
+    kubernetesApiImageName,
+    webUiImageName,
+    webUiDns,
+    kubernetesApiDns);
 }
 
 node {
@@ -111,8 +162,8 @@ node {
       /* gitUrl       */ "https://github.com/alfpedraza-aws-devops/fibonacci",
       /* ecrUrl       */ params.ECR_URL,
       /* rawImageName */ "aws-devops-fibonacci",
-      /* rawImageTag  */ "0.1.4",
-      /* buildId      */ env.BUILD_ID)
+      /* rawImageTag  */ params.FIBONACCI_IMAGE_TAG,
+      /* buildId      */ env.BUILD_ID);
   }
 
   stage("Build Kubernetes API") {
@@ -121,8 +172,8 @@ node {
       /* gitUrl       */ "https://github.com/alfpedraza-aws-devops/kubernetes-api",
       /* ecrUrl       */ params.ECR_URL,
       /* rawImageName */ "aws-devops-kubernetes-api",
-      /* rawImageTag  */ "0.1.11",
-      /* buildId      */ env.BUILD_ID)
+      /* rawImageTag  */ params.KUBERNETESAPI_IMAGE_TAG,
+      /* buildId      */ env.BUILD_ID);
   }
 
   stage("Build Web UI") {
@@ -131,8 +182,8 @@ node {
       /* gitUrl       */ "https://github.com/alfpedraza-aws-devops/web-ui",
       /* ecrUrl       */ params.ECR_URL,
       /* rawImageName */ "aws-devops-web-ui",
-      /* rawImageTag  */ "0.1.4",
-      /* buildId      */ env.BUILD_ID)
+      /* rawImageTag  */ params.WEBUI_IMAGE_TAG,
+      /* buildId      */ env.BUILD_ID);
   }
 
   stage("Update VPC") {
@@ -140,7 +191,7 @@ node {
       /* accountId       */ params.ACCOUNT_ID,
       /* regionName      */ params.REGION_NAME,
       /* projectName     */ params.PROJECT_NAME,
-      /* environmentName */ "vpc")
+      /* environmentName */ "vpc");
   }
 
   stage("Update DEV environment") {
@@ -148,32 +199,42 @@ node {
       /* accountId       */ params.ACCOUNT_ID,
       /* regionName      */ params.REGION_NAME,
       /* projectName     */ params.PROJECT_NAME,
-      /* environmentName */ "dev")
+      /* environmentName */ "dev");
   }
 
   stage("Deploy to DEV environment") {
     deployApp(
-      /* accountId       */ params.ACCOUNT_ID,
-      /* regionName      */ params.REGION_NAME,
-      /* projectName     */ params.PROJECT_NAME,
-      /* environmentName */ "dev")
+      /* accountId             */ params.ACCOUNT_ID,
+      /* regionName            */ params.REGION_NAME,
+      /* projectName           */ params.PROJECT_NAME,
+      /* environmentName       */ "dev",
+      /* ecrUrl                */ params.ECR_URL,
+      /* buildId               */ env.BUILD_ID,
+      /* fibonacciImageTag     */ params.FIBONACCI_IMAGE_TAG
+      /* kubernetesApiImageTag */ params.KUBERNETESAPI_IMAGE_TAG,
+      /* webUiImageTag         */ params.WEBUI_IMAGE_TAG);
   }
 
   stage("Update PROD environment") {
-    input "Deploy to PROD?"
+    input("Deploy to PROD?");
     applyTerraformUpdates(
       /* accountId       */ params.ACCOUNT_ID,
       /* regionName      */ params.REGION_NAME,
       /* projectName     */ params.PROJECT_NAME,
-      /* environmentName */ "prod")
+      /* environmentName */ "prod");
   }
 
   stage("Deploy to PROD environment") {
     deployApp(
-      /* accountId       */ params.ACCOUNT_ID,
-      /* regionName      */ params.REGION_NAME,
-      /* projectName     */ params.PROJECT_NAME,
-      /* environmentName */ "prod")
+      /* accountId             */ params.ACCOUNT_ID,
+      /* regionName            */ params.REGION_NAME,
+      /* projectName           */ params.PROJECT_NAME,
+      /* environmentName       */ "prod",
+      /* ecrUrl                */ params.ECR_URL,
+      /* buildId               */ env.BUILD_ID,
+      /* fibonacciImageTag     */ params.FIBONACCI_IMAGE_TAG
+      /* kubernetesApiImageTag */ params.KUBERNETESAPI_IMAGE_TAG,
+      /* webUiImageTag         */ params.WEBUI_IMAGE_TAG);
   }
   
 }
