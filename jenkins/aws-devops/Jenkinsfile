@@ -46,7 +46,7 @@ def waitUntilOneNodeIsReady() {
         local NODES="$(kubectl --kubeconfig=./helm/admin.conf get nodes)
         local NODE_LINE=$(echo "$NODES" | grep "[[:space:]]\\+Ready[[:space:]]\\+node[[:space:]]\\+" | head -1)
         echo NODE_LINE
-      '''
+      ''',
       returnStdout: true
     ).trim();
     echo nodeReady
