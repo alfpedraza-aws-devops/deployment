@@ -65,19 +65,41 @@ def waitUntilTillerIsReady() {
   ''');
 }
 
+def waitUntilLoadBalancersAreReady() {
+
+}
+
 def deployApp(accountId, regionName, projectName, environmentName) {
   git("https://github.com/alfpedraza-aws-devops/deployment");
   def bucketName = "${accountId}-${projectName}-private-${environmentName}-master";
   waitUntilConfigFileIsReady(bucketName, regionName);
   waitUntilTillerIsReady();
+
+  // Create the Load Balancers First to get their DNS.
   sh """
-    cd ./helm/aws-devops/templates
-    rm !("kubernetes-api-service.yaml"|"web-ui-service.yaml")
-    export KUBECONFIG=./admin.conf
+    cd helm
+    mv aws-devops/templates tmp
+    mkdir aws-devops/templates
+    cp tmp/kubernetes-api-service.yaml aws-devops/templates/kubernetes-api-service.yaml
+    cp tmp/web-ui-service.yaml         aws-devops/templates/web-ui-service.yaml
+    export KUBECONFIG=admin.conf
     helm upgrade \
       --install \
       --wait --timeout 300 \
-      ${projectName} ./aws-devops
+      ${projectName} aws-devops
+  """;
+  waitUntilLoadBalancersAreReady();
+
+  // Create the rest of the chart.
+  sh """
+    cd helm
+    rm -rf aws-devops/templates 
+    mv tmp aws-devops/templates
+    export KUBECONFIG=admin.conf
+    helm upgrade \
+      --install \
+      --wait --timeout 300 \
+      ${projectName} aws-devops
   """;
 }
 
