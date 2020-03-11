@@ -42,7 +42,7 @@ def waitUntilOneNodeIsReady() {
   def isReady = false;
   for (i = 0; i < 40; i++) {
     def nodes = sh(
-      script: "kubectl --kubeconfig=./admin.conf get nodes",
+      script: "kubectl --kubeconfig=./helm/admin.conf get nodes",
       returnStdout: true
     ).trim();
     idReady = (nodes =~ /\s+Ready\s+node\s+/);
@@ -62,6 +62,7 @@ def deployApp(accountId, regionName, projectName, environmentName) {
   """;
   waitUntilOneNodeIsReady();
   sh """
+    cd ./helm
     export KUBECONFIG=./admin.conf
     helm upgrade \
       --install \
