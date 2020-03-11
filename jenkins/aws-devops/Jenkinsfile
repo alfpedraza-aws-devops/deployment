@@ -49,35 +49,26 @@ def waitUntil(scriptText, errorMessage) {
   if (!isReady) throw new Exception("Timeout!");
 }
 
-def waitUntilOneNodeIsReady() {
-  waitUntil('''
-    NODES="$(kubectl --kubeconfig=./helm/admin.conf get nodes)"
-    NODE_LINE=$(echo "$NODES" | grep "[[:space:]]\\+Ready[[:space:]]\\+node[[:space:]]\\+" | head -1)
-    echo $NODE_LINE
-  ''');
-}
-
-def waitUntilTillerIsRunning() {
-  waitUntil('''
-    TILLER="$(kubectl --kubeconfig=./helm/admin.conf get deployment tiller-deploy --namespace=kube-system)"
-    TILLER_LINE=$(echo "$TILLER" | grep "^tiller-deploy[[:space:]]\\+[:digit:]\\+[[:space:]]\\+" | head -1)
-    echo $TILLER_LINE
-  ''');
+def waitUntilConfigFileIsReady(bucketName) {
+  waitUntil("""
+    aws s3 cp s3://${bucketName}/admin.conf ./helm/admin.conf --region ${regionName}
+    CONFIG_FILE=$(cat ./helm/admin.conf)
+    echo CONFIG_FILE
+  """);
 }
 
 def waitUntilTillerIsReady() {
-  sh "kubectl --kubeconfig=./helm/admin.conf rollout status -w deployment/tiller-deploy --namespace=kube-system"
+  waitUntil('''
+    TILLER="$(kubectl --kubeconfig=./helm/admin.conf rollout status -w deployment/tiller-deploy --namespace=kube-system)"
+    TILLER_NOT_FOUND=$(echo "$TILLER" | grep "(NotFound)" | head -1)
+    if [$TILLER_NOT_FOUND == ""]; then echo "Found"; else echo ""; fi;
+  ''');
 }
 
 def deployApp(accountId, regionName, projectName, environmentName) {
-  def bucketName = "${accountId}-${projectName}-private-${environmentName}-master"
-  git("https://github.com/alfpedraza-aws-devops/deployment")
-  sh """
-    cd ./helm
-    aws s3 cp s3://${bucketName}/admin.conf ./admin.conf --region ${regionName}
-  """;
-  waitUntilOneNodeIsReady();
-  waitUntilTillerIsRunning();
+  git("https://github.com/alfpedraza-aws-devops/deployment");
+  def bucketName = "${accountId}-${projectName}-private-${environmentName}-master";
+  waitUntilConfigFileIsReady(bucketName);
   waitUntilTillerIsReady();
   sh """
     cd ./helm
