@@ -70,7 +70,7 @@ def waitUntilKubeConfigIsReady(String bucketName, String regionName) {
 def waitUntilHelmTillerIsReady() {
   waitUntil('''
     RESULT=""
-    TILLER=$(kubectl --kubeconfig=./helm/admin.conf rollout status -w deployment/tiller-deploy
+    TILLER=$(kubectl --kubeconfig=./helm/admin.conf rollout status -w deployment/tiller-deploy \
       --namespace=kube-system || echo "(NotFound)")
     TILLER_NOT_FOUND=$(echo "$TILLER" | grep "(NotFound)" | head -1)
     if [[ $TILLER_NOT_FOUND == "" ]]; then RESULT="Found"; else RESULT=""; fi;
@@ -117,11 +117,11 @@ def deployApplication(
       --install \
       --wait \
       --timeout 300 \
-      --set fibonacci.deployment.image.name=${fibonacciImageName}
-      --set kubernetesapi.deployment.image.name=${kubernetesApiImageName}
-      --set webui.deployment.image.name=${webUiImageName}
-      --set kubernetesapi.deployment.env.corsOrigins=${webUiDns}
-      --set webui.deployment.env.kubernetesApiUrl=${kubernetesApiDns}
+      --set fibonacci.deployment.image.name=${fibonacciImageName} \
+      --set kubernetesapi.deployment.image.name=${kubernetesApiImageName} \
+      --set webui.deployment.image.name=${webUiImageName} \
+      --set kubernetesapi.deployment.env.corsOrigins=${webUiDns} \
+      --set webui.deployment.env.kubernetesApiUrl=${kubernetesApiDns} \
       ${projectName} \
       ./aws-devops
   """;
