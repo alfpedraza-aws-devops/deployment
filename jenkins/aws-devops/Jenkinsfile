@@ -246,7 +246,6 @@ node {
   }
 
   stage("Update PROD environment") {
-    input("Deploy to PROD?");
     updateEnvironment(
       accountId      : params.ACCOUNT_ID,
       regionName     : params.REGION_NAME,
