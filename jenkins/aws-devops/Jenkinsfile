@@ -77,6 +77,8 @@ def waitForKubeConfig(String bucketName, String regionName) {
   waitUntilNotEmpty("""
     aws s3 cp s3://${bucketName}/admin.conf ./helm/admin.conf --region ${regionName} || true
     RESULT=\$(stat ./helm/admin.conf || echo "")
+    pwd
+    cat ./helm/admin.conf 
     echo \$RESULT
   """);
 }
