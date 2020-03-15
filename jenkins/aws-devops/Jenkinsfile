@@ -78,8 +78,8 @@ def waitForKubeConfig(String bucketName, String regionName) {
     echo \$(cat ./helm/admin.conf || true)
     aws s3 cp s3://${bucketName}/admin.conf ./helm/admin.conf --region ${regionName} || true
     RESULT=\$(stat ./helm/admin.conf || echo "")
-    echo \$(pwd)
-    echo \$(cat ./helm/admin.conf) 
+    echo \$(pwd || true)
+    echo \$(cat ./helm/admin.conf || true) 
     echo \$RESULT
   """);
 }
