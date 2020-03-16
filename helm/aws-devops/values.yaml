@@ -1,3 +1,5 @@
+environmentName: unspecified
+
 fibonacci:
   appName: fibonacci
   deployment:

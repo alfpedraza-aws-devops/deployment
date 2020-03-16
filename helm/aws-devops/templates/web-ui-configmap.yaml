@@ -9,3 +9,4 @@ metadata:
     heritage: {{ .Release.Service }}
 data:
   kubernetesApiUrl: {{ .Values.webui.deployment.env.kubernetesApiUrl }}
+  environmentName: {{ .Values.environmentName }}

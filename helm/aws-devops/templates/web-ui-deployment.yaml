@@ -29,6 +29,11 @@ spec:
             configMapKeyRef:
               name: {{ .Values.webui.appName }}
               key: kubernetesApiUrl
+        - name: ENVIRONMENT_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.webui.appName }}
+              key: environmentName
         resources:
           limits:
             cpu: {{ .Values.webui.deployment.limits.cpu }}

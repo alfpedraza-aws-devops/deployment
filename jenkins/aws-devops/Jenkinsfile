@@ -123,7 +123,7 @@ def deployLoadBalancers(String projectName) {
 }
 
 def deployApplication(
-  String projectName,
+  String projectName, String environmentName,
   String fibonacciImageName, String kubernetesApiImageName, String webUiImageName,
   String webUiDns, String kubernetesApiDns) {
   
@@ -137,6 +137,7 @@ def deployApplication(
       --install \
       --wait \
       --timeout 300 \
+      --set environmentName=${environmentName} \
       --set fibonacci.deployment.image.name=${fibonacciImageName} \
       --set kubernetesapi.deployment.image.name=${kubernetesApiImageName} \
       --set webui.deployment.image.name=${webUiImageName} \
@@ -177,6 +178,7 @@ def deployMicroservices(
 
   deployApplication(
     projectName,
+    environmentName,
     fibonacciImageName,
     kubernetesApiImageName,
     webUiImageName,
