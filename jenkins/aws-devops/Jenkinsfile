@@ -24,6 +24,37 @@ def buildAndPushImage(
   """;
 }
 
+def waitUntilNotEmpty(String scriptText) {
+  Boolean isReady = false;
+  for (int i = 0; i < 40; i++) {
+    String result = sh(script: scriptText, returnStdout: true).trim();
+    isReady = (!result.isEmpty());
+    if (isReady) break;
+    sleep(15);
+  }
+  if (!isReady) throw new Exception("Timeout!");
+}
+
+def waitForKubeConfig(String bucketName, String regionName) {
+  waitUntilNotEmpty("""
+    aws s3 cp s3://${bucketName}/admin.conf ./helm/admin.conf --region ${regionName} || true
+    RESULT=\$(stat ./helm/admin.conf || echo "")
+    echo \$RESULT
+  """);
+}
+
+def waitForHelmTiller() {
+  waitUntilNotEmpty('''
+    RESULT=""
+    TILLER=$(kubectl rollout status -w deployment/tiller-deploy \
+      --namespace=kube-system --kubeconfig=./helm/admin.conf \
+      || echo "(NotFound)")
+    TILLER_NOT_FOUND=$(echo "$TILLER" | grep "(NotFound)" | head -1)
+    if [[ $TILLER_NOT_FOUND == "" ]]; then RESULT="Found"; else RESULT=""; fi;
+    echo $RESULT
+  ''');
+}
+
 def updateEnvironment(Map parameters) {
   updateEnvironment(
     parameters.accountId, parameters.regionName,
@@ -59,38 +90,10 @@ def updateEnvironment(
         -var "region_name=${regionName}" \
         -var "project_name=${projectName}"
     """;
+    String masterBucketName = "${accountId}-${projectName}-private-${environmentName}-master";
+    waitForKubeConfig(masterBucketName, regionName);
+    waitForHelmTiller();
   }
-}
-
-def waitUntilNotEmpty(String scriptText) {
-  Boolean isReady = false;
-  for (int i = 0; i < 40; i++) {
-    String result = sh(script: scriptText, returnStdout: true).trim();
-    isReady = (!result.isEmpty());
-    if (isReady) break;
-    sleep(15);
-  }
-  if (!isReady) throw new Exception("Timeout!");
-}
-
-def waitForKubeConfig(String bucketName, String regionName) {
-  waitUntilNotEmpty("""
-    aws s3 cp s3://${bucketName}/admin.conf ./helm/admin.conf --region ${regionName} || true
-    RESULT=\$(stat ./helm/admin.conf || echo "")
-    echo \$RESULT
-  """);
-}
-
-def waitForHelmTiller() {
-  waitUntilNotEmpty('''
-    RESULT=""
-    TILLER=$(kubectl rollout status -w deployment/tiller-deploy \
-      --namespace=kube-system --kubeconfig=./helm/admin.conf \
-      || echo "(NotFound)")
-    TILLER_NOT_FOUND=$(echo "$TILLER" | grep "(NotFound)" | head -1)
-    if [[ $TILLER_NOT_FOUND == "" ]]; then RESULT="Found"; else RESULT=""; fi;
-    echo $RESULT
-  ''');
 }
 
 def getLoadBalancerDNS(String serviceName) {
@@ -151,22 +154,18 @@ def deployApplication(
 
 def deployMicroservices(Map parameters) {
   deployMicroservices(
-    parameters.accountId, parameters.regionName, parameters.projectName,
-    parameters.environmentName, parameters.ecrUrl, parameters.buildId,
+    parameters.projectName, parameters.environmentName,
+    parameters.ecrUrl, parameters.buildId,
     parameters.fibonacciImageTag, parameters.kubernetesApiImageTag, parameters.webUiImageTag
   );
 }
 
 def deployMicroservices(
-  String accountId, String regionName, String projectName,
-  String environmentName, String ecrUrl, String buildId,
+  String projectName, String environmentName,
+  String ecrUrl, String buildId,
   String fibonacciImageTag, String kubernetesApiImageTag, String webUiImageTag) {
 
   git("https://github.com/alfpedraza-aws-devops/deployment");
-  
-  String bucketName = "${accountId}-${projectName}-private-${environmentName}-master";
-  waitForKubeConfig(bucketName, regionName);
-  waitForHelmTiller();
 
   deployLoadBalancers(projectName);
   String kubernetesApiDns        = "http://" + getLoadBalancerDNS("kubernetes-api");
@@ -236,8 +235,6 @@ node {
 
   stage("Deploy to DEV environment") {
     deployMicroservices(
-      accountId            : params.ACCOUNT_ID,
-      regionName           : params.REGION_NAME,
       projectName          : params.PROJECT_NAME,
       environmentName      : "dev",
       ecrUrl               : params.ECR_URL,
@@ -257,8 +254,6 @@ node {
 
   stage("Deploy to PROD environment") {
     deployMicroservices(
-      accountId            : params.ACCOUNT_ID,
-      regionName           : params.REGION_NAME,
       projectName          : params.PROJECT_NAME,
       environmentName      : "prod",
       ecrUrl               : params.ECR_URL,
